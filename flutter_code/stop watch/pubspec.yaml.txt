@@ -1,0 +1,37 @@
+name: myapp_flu
+description: "A new Flutter project."
+
+# Prevent package from being accidentally published to pub.dev
+publish_to: 'none'  # Remove this line if you wish to publish to pub.dev
+
+# Version number for the application
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.7.2 <4.0.0"  # Specify a range for the SDK to ensure compatibility
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.0.4  # Add image_picker package for image selection
+  cupertino_icons: ^1.0.8  # Cupertino Icons for iOS-style icons
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0  # Lints for better code quality
+
+flutter:
+  uses-material-design: true  # Enable Material Design for the app
+
+  # Add assets if you have images or other static assets
+  assets:
+    - images/  # Include the entire 'images' folder in your app, adjust the path as needed
+
+  # Example for adding custom fonts if needed
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic

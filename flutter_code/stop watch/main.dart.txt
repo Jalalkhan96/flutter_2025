@@ -1,0 +1,326 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+void main() => runApp(StopwatchApp());
+
+class StopwatchApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Stopwatch with Background',
+      theme: ThemeData.dark(),
+      home: StopwatchHome(),
+    );
+  }
+}
+
+class StopwatchHome extends StatefulWidget {
+  @override
+  _StopwatchHomeState createState() => _StopwatchHomeState();
+}
+
+class _StopwatchHomeState extends State<StopwatchHome> {
+  Timer? _timer;
+  Duration _elapsed = Duration.zero;
+  Duration _setDuration = Duration(hours: 0, minutes: 1, seconds: 0);
+  bool _isRunning = false;
+  File? _backgroundImage;
+
+  final picker = ImagePicker();
+
+  Future<void> _pickBackgroundImage() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() => _backgroundImage = File(pickedFile.path));
+    }
+  }
+
+  void _resetBackgroundImage() {
+    setState(() => _backgroundImage = null);
+  }
+
+  void _startTimer() {
+    if (_timer != null) return;
+    setState(() => _isRunning = true);
+    _timer = Timer.periodic(Duration(seconds: 1), (_) {
+      setState(() {
+        _elapsed += Duration(seconds: 1);
+        if (_elapsed >= _setDuration) {
+          _stopTimer();
+          _showAlertDialog();
+        }
+      });
+    });
+  }
+
+  void _pauseTimer() {
+    _timer?.cancel();
+    _timer = null;
+    setState(() => _isRunning = false);
+  }
+
+  void _resetTimer() {
+    _pauseTimer();
+    setState(() => _elapsed = Duration.zero);
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+    setState(() => _isRunning = false);
+  }
+
+  void _showAlertDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('⏰ Time Up!'),
+        content: Text('The stopwatch reached the set time.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('OK'))
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = twoDigits(d.inHours);
+    final minutes = twoDigits(d.inMinutes.remainder(60));
+    final seconds = twoDigits(d.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+
+  Widget _buildStyledButton(String label, VoidCallback? onPressed, Color color) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: color,
+        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        elevation: 5,
+      ),
+      child: Text(label, style: TextStyle(fontSize: 16)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background image with black overlay
+          _backgroundImage != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(_backgroundImage!, fit: BoxFit.cover),
+                    Container(color: Colors.black.withOpacity(0.6)),
+                  ],
+                )
+              : Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.deepPurple.shade800, Colors.black],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                ),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Text(
+                      '🕒 abix stopwatch',
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 30),
+                    Text(
+                      _formatDuration(_elapsed),
+                      style: TextStyle(
+                        fontSize: 60,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amberAccent,
+                      ),
+                    ),
+                    SizedBox(height: 30),
+
+                    // Time set card with gradient
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.purpleAccent, Colors.deepPurple],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black45,
+                            blurRadius: 6,
+                            offset: Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Text(
+                            "⏳ Set Timer (HH:MM:SS)",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                          SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildDropdown(
+                                  label: 'h',
+                                  value: _setDuration.inHours,
+                                  max: 24,
+                                  onChanged: (val) {
+                                    if (!_isRunning) {
+                                      setState(() {
+                                        _setDuration = Duration(
+                                          hours: val!,
+                                          minutes: _setDuration.inMinutes % 60,
+                                          seconds: _setDuration.inSeconds % 60,
+                                        );
+                                      });
+                                    }
+                                  }),
+                              _buildDropdown(
+                                  label: 'm',
+                                  value: _setDuration.inMinutes % 60,
+                                  max: 59,
+                                  onChanged: (val) {
+                                    if (!_isRunning) {
+                                      setState(() {
+                                        _setDuration = Duration(
+                                          hours: _setDuration.inHours,
+                                          minutes: val!,
+                                          seconds: _setDuration.inSeconds % 60,
+                                        );
+                                      });
+                                    }
+                                  }),
+                              _buildDropdown(
+                                  label: 's',
+                                  value: _setDuration.inSeconds % 60,
+                                  max: 59,
+                                  onChanged: (val) {
+                                    if (!_isRunning) {
+                                      setState(() {
+                                        _setDuration = Duration(
+                                          hours: _setDuration.inHours,
+                                          minutes: _setDuration.inMinutes % 60,
+                                          seconds: val!,
+                                        );
+                                      });
+                                    }
+                                  }),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 20),
+
+                    // Stopwatch control buttons
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        _buildStyledButton("▶ Start", _isRunning ? null : _startTimer, Colors.green),
+                        _buildStyledButton("⏸ Pause", _isRunning ? _pauseTimer : null, Colors.orange),
+                        _buildStyledButton("🔄 Reset", _resetTimer, Colors.red),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+
+                    // Background image control buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _pickBackgroundImage,
+                          icon: Icon(Icons.image),
+                          label: Text("Change Background"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.white,
+                            shape: StadiumBorder(),
+                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          onPressed: _backgroundImage != null ? _resetBackgroundImage : null,
+                          icon: Icon(Icons.refresh),
+                          label: Text("Reset Background"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey,
+                            foregroundColor: Colors.white,
+                            shape: StadiumBorder(),
+                            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required int value,
+    required int max,
+    required void Function(int?)? onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(color: Colors.white70)),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: DropdownButton<int>(
+              dropdownColor: Colors.grey[900],
+              value: value,
+              underline: SizedBox(),
+              items: List.generate(max + 1, (i) => DropdownMenuItem(
+                    value: i,
+                    child: Text('$i', style: TextStyle(color: Colors.white)),
+                  )),
+              onChanged: onChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
